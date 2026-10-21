@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>HOMA EXCHANGE | صرافی هما</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&family=Vazirmatn:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.24.7/babel.min.js"></script>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);--bg:#06110e;--bg2:#0a1c17;--card:#0c2a21;--line:rgba(212,175,95,.38);--tx:#f3ecd8;--mut:#a9b8ae;--gold:#e2c275;--up:#22c55e;--dn:#ef4444;color-scheme:dark}
+:root[data-theme=light]{--bg:#f6f0e0;--bg2:#efe6cf;--card:#fffaf0;--line:rgba(150,110,35,.45);--tx:#12241d;--mut:#55655c;--gold:#8a6218;--up:#15803d;--dn:#b91c1c;color-scheme:light}
+html{height:100%;scroll-padding-top:calc(72px + env(safe-area-inset-top,0px));scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:Inter,Vazirmatn,sans-serif}
+[dir=rtl] body{font-family:Vazirmatn,Inter,sans-serif}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:41;background:var(--bg)}
+.serif{font-family:'Playfair Display',Vazirmatn,serif}
+.gold{color:var(--gold)}.mut{color:var(--mut)}.up{color:var(--up)}.dn{color:var(--dn)}
+.card{border:1px solid var(--line);border-radius:14px;background:radial-gradient(120% 90% at 15% 0,rgba(22,110,78,.28),transparent 60%),linear-gradient(160deg,var(--card),var(--bg2))}
+:root[data-theme=light] .card{background:linear-gradient(160deg,var(--card),var(--bg2))}
+.gbtn{background:linear-gradient(#efd48f,#c9a04a);color:#1a1405;font-weight:600;border-radius:10px;padding:.6rem 1.2rem;display:inline-flex;gap:.5rem;align-items:center;justify-content:center;cursor:pointer;border:0;box-shadow:0 4px 18px rgba(201,160,74,.25)}
+.gbtn:hover{filter:brightness(1.08)}.gbtn:disabled{opacity:.5;cursor:not-allowed}
+.obtn{border:1px solid var(--line);color:var(--tx);border-radius:10px;padding:.55rem 1.1rem;display:inline-flex;gap:.5rem;align-items:center;cursor:pointer;background:transparent}
+.obtn:hover{border-color:var(--gold)}
+.fld{width:100%;background:rgba(0,0,0,.22);border:1px solid var(--line);border-radius:10px;padding:.65rem .8rem;color:var(--tx);font-size:1rem}
+:root[data-theme=light] .fld{background:#fff}
+select.fld option{background:#0a1c17;color:#f3ecd8}
+:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.orn{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48'%3E%3Cg fill='none' stroke='%23d4af5f' stroke-width='.8' opacity='.7'%3E%3Crect x='9' y='9' width='30' height='30'/%3E%3Crect x='9' y='9' width='30' height='30' transform='rotate(45 24 24)'/%3E%3Ccircle cx='24' cy='24' r='8'/%3E%3C/g%3E%3C/svg%3E");opacity:.5}
+.hdr{position:sticky;top:env(safe-area-inset-top,0px);z-index:40;background:var(--bg);border-bottom:1px solid var(--line)}
+td,th{padding:.7rem .6rem;text-align:start}
+tbody tr{border-top:1px solid rgba(212,175,95,.14)}tbody tr:hover{background:rgba(212,175,95,.06)}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}.animate-pulse{animation:none}}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const {useState,useEffect,useMemo}=React;
+/* ---------- Configuration: swap in real data / business info here ---------- */
+const CONFIG={API_URL:'',TELEGRAM_URL:'https://t.me/Legendteen',TELEGRAM_TEXT:'Legendteen.t.me',
+ BUSINESS:{address:'',phone:'',license:''},SOCIAL:{telegram:'https://t.me/Legendteen',x:'',instagram:'',linkedin:'',youtube:''}};
+const CUR=[['USD','US Dollar','دلار آمریکا'],['EUR','Euro','یورو'],['AED','UAE Dirham','درهم امارات'],['TRY','Turkish Lira','لیر ترکیه'],['CAD','Canadian Dollar','دلار کانادا'],['GBP','British Pound','پوند انگلیس'],['AUD','Australian Dollar','دلار استرالیا'],['CHF','Swiss Franc','فرانک سوئیس']].map(([code,en,fa],i)=>({code,en,fa,i}));
+const DEMO={USD:[84230,84250,.32],EUR:[91560,91590,.28],AED:[22980,23020,.21],TRY:[2460,2490,.35],CAD:[61420,61800,.18],GBP:[107350,107600,-.12],AUD:[55200,55480,.09],CHF:[94100,94480,-.05]};
+/* API shape expected: {rates:{USD:{buy,sell,change},...}} (arrays [buy,sell,change] also accepted) */
+async function fetchRates(){
+ if(CONFIG.API_URL){const r=await fetch(CONFIG.API_URL);if(!r.ok)throw new Error('API '+r.status);const j=await r.json();
+  const n=v=>Array.isArray(v)?v:[v.buy,v.sell,v.change];const o={};CUR.forEach(c=>{if(!j.rates[c.code])throw new Error('Missing '+c.code);o[c.code]=n(j.rates[c.code])});return{rates:o,demo:false,at:new Date()}}
+ await new Promise(r=>setTimeout(r,700));return{rates:DEMO,demo:true,at:new Date()}}
+
+const T={en:{nav:['Home','Exchange Rates','Buy & Sell','Currency Exchange','Markets','About Us','Fees','Contact'],login:'Log In',signup:'Sign Up',eye:'Your Trusted Currency Exchange Partner',h1:'Global Currencies.',h2:'Local Trust.',tag:'Fast • Secure • Reliable',desc:'Exchange your money with confidence at HOMA Exchange. Your global financial partner.',c1:'Exchange Now',c2:'View Exchange Rates',mk:'Market Overview',tabs:['All','Favorites','Gainers','Losers'],search:'Search currency…',sorts:['Default order','Biggest change','Highest price'],cur:'Currency',buy:'Buy',sell:'Sell',chg:'24h change',chart:'Chart',all:'View All Markets',empty:'No currencies match. Clear the search or switch tab.',err:'Could not load rates. Check your connection or API settings, then retry.',retry:'Retry',load:'Loading rates…',upd:'Last updated',demo:'Demo data — not live rates',ex:'Currency Exchange',exs:'Convert between currencies at the displayed rates.',from:'From',to:'To',amt:'Amount',avail:'Available balance: — (log in to see)',rate:'Rate',swap:'Swap currencies',get:'You receive',f:[['Secure Transactions','Protected, carefully handled exchanges.'],['Best Exchange Rates','Clear buy and sell prices for every currency.'],['Fast Processing','Quick, streamlined requests.'],['24/7 Support','Reach our team on Telegram.']],ph:'Your Trusted Partner in Global Finance',pp:'Whether you are exchanging or sending money abroad, HOMA Exchange keeps it simple, secure and fast.',learn:'Learn More',tg:'Telegram Support',tgs:'Get instant help on Telegram',tgb:'Contact on Telegram',q:'Quick Links',co:'Company',su:'Support',fol:'Follow Us',priv:'Privacy Policy',terms:'Terms of Service',rights:'All rights reserved.',help:['Help Center','FAQ','Live Chat','Report a Bug'],email:'Email',pass:'Password',name:'Full name',go:'Continue',dform:'Demo form — connect your backend to enable accounts.',legal:'This page’s text is set by the business. Add it in the configuration.',order:'Demo only — no real transaction was made.',slogan:'HOMA Exchange — your partner on the global path',toman:'Toman'},
+fa:{nav:['خانه','نرخ ارز','خرید و فروش','تبدیل ارز','بازارها','درباره ما','کارمزدها','تماس'],login:'ورود',signup:'ثبت‌نام',eye:'شریک مورد اعتماد شما در مبادله ارز',h1:'ارزهای جهانی.',h2:'اعتماد محلی.',tag:'سریع • امن • قابل اعتماد',desc:'با اطمینان در صرافی هما ارز خود را مبادله کنید. شریک مالی جهانی شما.',c1:'همین حالا تبدیل کنید',c2:'مشاهده نرخ ارز',mk:'نمای کلی بازار',tabs:['همه','علاقه‌مندی‌ها','صعودی','نزولی'],search:'جستجوی ارز…',sorts:['ترتیب پیش‌فرض','بیشترین تغییر','بالاترین قیمت'],cur:'ارز',buy:'خرید',sell:'فروش',chg:'تغییر ۲۴ ساعته',chart:'نمودار',all:'مشاهده همه بازارها',empty:'ارزی پیدا نشد. جستجو را پاک کنید یا تب دیگری را انتخاب کنید.',err:'نرخ‌ها بارگذاری نشد. اتصال یا تنظیمات API را بررسی و دوباره تلاش کنید.',retry:'تلاش دوباره',load:'در حال بارگذاری نرخ‌ها…',upd:'آخرین به‌روزرسانی',demo:'داده نمونه — نرخ زنده نیست',ex:'تبدیل ارز',exs:'ارزها را با نرخ‌های نمایش‌داده‌شده تبدیل کنید.',from:'از',to:'به',amt:'مبلغ',avail:'موجودی: — (برای مشاهده وارد شوید)',rate:'نرخ',swap:'جابجایی ارزها',get:'دریافتی شما',f:[['تراکنش امن','مبادله‌هایی محافظت‌شده و با دقت انجام‌شده.'],['بهترین نرخ‌ها','قیمت خرید و فروش شفاف برای هر ارز.'],['پردازش سریع','درخواست‌های سریع و ساده.'],['پشتیبانی ۲۴/۷','با ما در تلگرام در تماس باشید.']],ph:'شریک مورد اعتماد شما در امور مالی جهانی',pp:'چه ارز مبادله کنید و چه پول به خارج بفرستید، صرافی هما کار را ساده، امن و سریع می‌کند.',learn:'بیشتر بدانید',tg:'پشتیبانی تلگرام',tgs:'پاسخ سریع در تلگرام',tgb:'تماس در تلگرام',q:'پیوندهای سریع',co:'شرکت',su:'پشتیبانی',fol:'ما را دنبال کنید',priv:'حریم خصوصی',terms:'شرایط استفاده',rights:'تمامی حقوق محفوظ است.',help:['مرکز راهنما','پرسش‌های متداول','گفتگوی زنده','گزارش خطا'],email:'ایمیل',pass:'گذرواژه',name:'نام و نام خانوادگی',go:'ادامه',dform:'فرم نمایشی — برای فعال‌سازی حساب، سرور را متصل کنید.',legal:'متن این صفحه توسط کسب‌وکار تنظیم می‌شود. آن را در پیکربندی اضافه کنید.',order:'فقط نمایشی — هیچ تراکنش واقعی انجام نشد.',slogan:'صرافی هما، همراه شما در مسیر جهانی شدن',toman:'تومان'}};
+const NAVH=['#home','#rates','#exchange','#exchange','#markets','#about','#fees','#contact'];
+const P={shield:'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z M9 12l2 2 4-4',chart:'M4 20V4 M4 20h16 M8 16l4-5 3 3 5-7',bolt:'M13 2L4 14h7l-1 8 9-12h-7z',head:'M4 14v-2a8 8 0 0116 0v2 M4 14h3v5H5a1 1 0 01-1-1z M20 14h-3v5h2a1 1 0 001-1z M17 19c0 2-2 3-5 3',star:'M12 3l2.8 5.7 6.2.9-4.5 4.4 1 6.2L12 17.2 6.5 20.2l1-6.2L3 9.6l6.2-.9z',swap:'M7 4v14M3 14l4 4 4-4M17 20V6M13 10l4-4 4 4',search:'M11 4a7 7 0 100 14 7 7 0 000-14z M21 21l-5-5',globe:'M12 3a9 9 0 100 18 9 9 0 000-18z M3 12h18 M12 3c3 3 3 15 0 18 M12 3c-3 3-3 15 0 18',moon:'M20 14A8 8 0 0110 4a8 8 0 1010 10z',sun:'M12 8a4 4 0 100 8 4 4 0 000-8z M12 2v2 M12 20v2 M2 12h2 M20 12h2 M5 5l1.5 1.5 M17.5 17.5L19 19 M5 19l1.5-1.5 M17.5 6.5L19 5',arrow:'M5 12h14M13 6l6 6-6 6',menu:'M4 7h16M4 12h16M4 17h16',x:'M6 6l12 12M18 6L6 18',send:'M21 4L3 11l6 2 2 7 3-5 5 4z',refresh:'M20 11a8 8 0 10-2 6 M20 4v7h-7'};
+const Ic=({n,s=18,c=''})=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className={c} aria-hidden="true"><path d={P[n]}/></svg>;
+const fmt=(n,l,d=0)=>n.toLocaleString(l==='fa'?'fa-IR':'en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
+const pct=(n,l)=>(n>0?'+':n<0?'−':'')+fmt(Math.abs(n),l,2)+'%';
+
+function Flag({c,s=28}){const F={
+USD:<><rect width="24" height="24" fill="#fff"/>{[0,1,2,3].map(i=><rect key={i} y={i*6+1} width="24" height="3" fill="#b22234"/>)}<rect width="13" height="13" fill="#3c3b6e"/></>,
+EUR:<><rect width="24" height="24" fill="#039"/>{Array.from({length:12},(_,i)=><circle key={i} cx={12+7*Math.cos(i*Math.PI/6)} cy={12+7*Math.sin(i*Math.PI/6)} r="1.2" fill="#fc0"/>)}</>,
+AED:<><rect width="24" height="8" fill="#00732f"/><rect y="8" width="24" height="8" fill="#fff"/><rect y="16" width="24" height="8" fill="#000"/><rect width="8" height="24" fill="#e00"/></>,
+TRY:<><rect width="24" height="24" fill="#e30a17"/><circle cx="10" cy="12" r="5" fill="#fff"/><circle cx="11.5" cy="12" r="4" fill="#e30a17"/><circle cx="15" cy="12" r="1.5" fill="#fff"/></>,
+CAD:<><rect width="24" height="24" fill="#fff"/><rect width="6" height="24" fill="#d80621"/><rect x="18" width="6" height="24" fill="#d80621"/><path d="M12 5l1.5 3 2-1-1 4 2 1-4 2 .5 3h-2l.5-3-4-2 2-1-1-4 2 1z" fill="#d80621"/></>,
+GBP:<><rect width="24" height="24" fill="#012169"/><path d="M0 0L24 24M24 0L0 24" stroke="#fff" strokeWidth="4"/><path d="M0 0L24 24M24 0L0 24" stroke="#c8102e" strokeWidth="1.5"/><path d="M12 0v24M0 12h24" stroke="#fff" strokeWidth="7"/><path d="M12 0v24M0 12h24" stroke="#c8102e" strokeWidth="4"/></>,
+AUD:<><rect width="24" height="24" fill="#012169"/><path d="M0 0L12 12M12 0L0 12" stroke="#fff" strokeWidth="2"/><path d="M6 0v12M0 6h12" stroke="#c8102e" strokeWidth="3"/><circle cx="6" cy="18" r="2" fill="#fff"/><circle cx="17" cy="6" r="1.2" fill="#fff"/><circle cx="19" cy="14" r="1.2" fill="#fff"/><circle cx="15" cy="19" r="1.2" fill="#fff"/></>,
+CHF:<><rect width="24" height="24" fill="#d52b1e"/><path d="M10 5h4v5h5v4h-5v5h-4v-5H5v-4h5z" fill="#fff"/></>,
+IRT:<><rect width="24" height="8" fill="#239f40"/><rect y="8" width="24" height="8" fill="#fff"/><rect y="16" width="24" height="8" fill="#da0000"/></>};
+ return <svg width={s} height={s} viewBox="0 0 24 24" style={{borderRadius:'50%',flexShrink:0,boxShadow:'0 0 0 1px var(--line)'}} aria-hidden="true">{F[c]}</svg>}
+
+function Spark({seed,up,w=92,h=28}){const d=useMemo(()=>{let x=seed*977+13,v=0;const p=Array.from({length:20},()=>{x=(x*9301+49297)%233280;v+=x/233280-(up?.4:.6);return v});const mn=Math.min(...p),mx=Math.max(...p);return p.map((y,i)=>(i?'L':'M')+(i/19*w).toFixed(1)+' '+(h-2-(y-mn)/((mx-mn)||1)*(h-4)).toFixed(1)).join('')},[seed,up]);
+ return <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} aria-hidden="true"><path d={d} fill="none" stroke={up?'#22c55e':'#ef4444'} strokeWidth="1.5"/></svg>}
+
+function Bird({s=40}){return <svg width={s} height={s} viewBox="0 0 100 100" fill="url(#gd)" aria-hidden="true">
+ <path d="M47 52C28 52 12 38 6 14c12 10 22 12 32 13-12-7-18-15-18-23 14 8 24 22 28 40z"/><path transform="matrix(-1 0 0 1 100 0)" d="M47 52C28 52 12 38 6 14c12 10 22 12 32 13-12-7-18-15-18-23 14 8 24 22 28 40z"/>
+ <circle cx="50" cy="24" r="4.5"/><path d="M45 19l2.5-5 2.5 3 2.5-3 2.5 5z"/><path d="M46 28c-4 12-2 26 1 34l3 34 3-34c3-8 5-22 1-34z"/><path d="M50 70c-10 10-14 22-12 28 6-8 10-12 12-18 2 6 6 10 12 18 2-6-2-18-12-28z"/></svg>}
+function Logo({s=40}){return <a href="#home" className="flex items-center gap-2" style={{textDecoration:'none'}} aria-label="HOMA EXCHANGE | صرافی هما"><Bird s={s}/><span className="leading-tight"><span className="serif gold block font-bold" style={{fontSize:s*.46}}>صرافی هما</span><span className="gold block" style={{fontSize:s*.24,letterSpacing:'.3em'}}>HOMA EXCHANGE</span></span></a>}
+
+function Skyline(){return <svg className="absolute inset-0 w-full h-full" viewBox="0 0 1000 420" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+ <defs><linearGradient id="sk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#06141a"/><stop offset=".5" stopColor="#5a3220"/><stop offset=".82" stopColor="#d98a30"/><stop offset="1" stopColor="#f4c36b"/></linearGradient>
+ <radialGradient id="sn" cx=".7" cy=".8" r=".45"><stop offset="0" stopColor="#ffd58a" stopOpacity=".85"/><stop offset="1" stopColor="#ffd58a" stopOpacity="0"/></radialGradient></defs>
+ <rect width="1000" height="420" fill="url(#sk)"/><rect width="1000" height="420" fill="url(#sn)"/>
+ <path d="M0 300L120 250 220 280 330 215 420 255 520 165 610 240 700 200 820 262 1000 232V420H0z" fill="#3a3a4c"/>
+ <path d="M520 165L488 205 518 192 540 214 562 196 586 222 610 240 566 190z" fill="#f3e6d3" opacity=".75"/>
+ <path d="M0 335L1000 312V420H0z" fill="#1a1a22"/>
+ {Array.from({length:26},(_,i)=><rect key={i} x={i*40+(i*37)%15} y={300+(i*53)%46} width={20+(i*7)%18} height="140" fill="#12131a"/>)}
+ <path d="M633 420L640 140 647 420z" fill="#15151c"/><path d="M624 112h32l-4 30h-24z" fill="#1d1d26"/><path d="M640 112V70" stroke="#15151c" strokeWidth="2"/><rect x="624" y="112" width="32" height="3" fill="url(#gd)"/>
+ <path d="M772 420v-62q0-60 68-68 68 8 68 68v62h-20v-60q0-34-48-40-48 6-48 40v60z" fill="url(#gd)"/><rect x="760" y="356" width="160" height="10" fill="url(#gd)" opacity=".7"/></svg>}
+
+function useRates(){const[s,set]=useState({st:'loading'});const load=()=>{set({st:'loading'});fetchRates().then(d=>set({st:'ok',...d})).catch(e=>set({st:'err',msg:e.message}))};useEffect(()=>{load()},[]);return[s,load]}
+const Skel=({h=96})=><div className="rounded-xl animate-pulse" style={{height:h,background:'var(--bg2)',border:'1px solid var(--line)'}}/>;
+const Err=({t,retry,msg})=><div role="alert" className="card p-5 flex flex-wrap items-center gap-3"><span className="dn">{t.err}{msg?` (${msg})`:''}</span><button className="obtn" onClick={retry}><Ic n="refresh" s={16}/>{t.retry}</button></div>;
+
+function Modal({kind,t,onClose,notify}){useEffect(()=>{const k=e=>e.key==='Escape'&&onClose();addEventListener('keydown',k);return()=>removeEventListener('keydown',k)},[]);
+ const legal=kind==='priv'||kind==='terms';const title=kind==='login'?t.login:kind==='signup'?t.signup:kind==='priv'?t.priv:t.terms;
+ return <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{background:'rgba(0,0,0,.65)'}} onClick={onClose}><div role="dialog" aria-modal="true" aria-label={title} className="card w-full max-w-sm p-6" style={{background:'var(--bg2)'}} onClick={e=>e.stopPropagation()}>
+ <div className="flex justify-between items-center mb-4"><h2 className="serif gold text-xl font-bold">{title}</h2><button onClick={onClose} aria-label="Close"><Ic n="x"/></button></div>
+ {legal?<p className="mut">{t.legal}</p>:<form className="grid gap-3" onSubmit={e=>{e.preventDefault();notify(t.dform);onClose()}}>
+ {kind==='signup'&&<label className="grid gap-1 text-sm mut">{t.name}<input className="fld" required autoComplete="name"/></label>}
+ <label className="grid gap-1 text-sm mut">{t.email}<input className="fld" type="email" required autoComplete="email"/></label>
+ <label className="grid gap-1 text-sm mut">{t.pass}<input className="fld" type="password" required minLength="8" autoComplete={kind==='login'?'current-password':'new-password'}/></label>
+ <button className="gbtn mt-1">{t.go}</button><p className="text-xs mut">{t.dform}</p></form>}</div></div>}
+
+function Market({rows,t,lang,favs,toggle,onPick}){const[tab,setTab]=useState(0),[q,setQ]=useState(''),[sort,setSort]=useState('i');
+ const list=useMemo(()=>{let l=rows.filter(r=>(r.code+r.en+r.fa).toLowerCase().includes(q.trim().toLowerCase()));
+  if(tab===1)l=l.filter(r=>favs.includes(r.code));if(tab===2)l=l.filter(r=>r.chg>0);if(tab===3)l=l.filter(r=>r.chg<0);
+  return[...l].sort((a,b)=>sort==='i'?a.i-b.i:sort==='c'?b.chg-a.chg:b.buy-a.buy)},[rows,q,tab,favs,sort]);
+ return <div className="card overflow-hidden"><div className="p-4 flex flex-wrap items-center gap-3 justify-between"><h2 className="serif text-2xl font-semibold">{t.mk}</h2>
+ <div className="flex flex-wrap gap-1" role="tablist">{t.tabs.map((x,i)=><button key={i} role="tab" aria-selected={tab===i} onClick={()=>setTab(i)} className="px-3 py-1 text-sm" style={{borderBottom:'2px solid '+(tab===i?'var(--gold)':'transparent'),color:tab===i?'var(--gold)':'var(--mut)'}}>{x}</button>)}</div>
+ <div className="flex gap-2 w-full sm:w-auto"><label className="relative flex-1"><span className="sr-only">{t.search}</span><span className="absolute top-1/2 -translate-y-1/2 mut" style={{insetInlineStart:10}}><Ic n="search" s={15}/></span><input className="fld" style={{paddingInlineStart:32,padding:'.45rem .6rem .45rem 2rem'}} value={q} onChange={e=>setQ(e.target.value)} placeholder={t.search}/></label>
+ <select className="fld" style={{width:'auto',padding:'.45rem .5rem'}} value={sort} onChange={e=>setSort(e.target.value)} aria-label="Sort">{['i','c','p'].map((v,i)=><option key={v} value={v}>{t.sorts[i]}</option>)}</select></div></div>
+ <div className="overflow-x-auto"><table className="w-full text-sm" style={{minWidth:560}}><thead className="mut" style={{background:'rgba(0,0,0,.18)'}}><tr><th>#</th><th>{t.cur}</th><th className="hidden sm:table-cell">{lang==='fa'?'نماد':'Symbol'}</th><th>{t.buy}</th><th>{t.sell}</th><th>{t.chg}</th><th className="hidden md:table-cell">{t.chart}</th><th><span className="sr-only">Favorite</span></th></tr></thead>
+ <tbody>{list.map(r=><tr key={r.code} className="cursor-pointer" onClick={()=>onPick(r.code)}><td>{fmt(r.i+1,lang)}</td><td><div className="flex items-center gap-2"><Flag c={r.code}/><div><div className="font-semibold">{lang==='fa'?r.fa:r.en}</div><div className="text-xs mut">{lang==='fa'?r.en:r.fa}</div></div></div></td><td className="hidden sm:table-cell mut">{r.code}</td><td>{fmt(r.buy,lang)}</td><td>{fmt(r.sell,lang)}</td><td className={r.chg>=0?'up':'dn'} dir="ltr" style={{textAlign:'start'}}>{pct(r.chg,lang)}</td><td className="hidden md:table-cell"><Spark seed={r.i+3} up={r.chg>=0}/></td>
+ <td><button aria-pressed={favs.includes(r.code)} aria-label={'Favorite '+r.code} onClick={e=>{e.stopPropagation();toggle(r.code)}} style={{color:'var(--gold)'}}><svg width="20" height="20" viewBox="0 0 24 24" fill={favs.includes(r.code)?'currentColor':'none'} stroke="currentColor" strokeWidth="1.6"><path d={P.star}/></svg></button></td></tr>)}</tbody></table>
+ {!list.length&&<p className="p-6 text-center mut">{t.empty}</p>}</div>
+ <div className="p-3 flex justify-between text-xs mut"><span>{t.demo}</span><a href="#rates" className="gold">{t.all}</a></div></div>}
+
+function Converter({rows,t,lang,from,setFrom,to,setTo,notify,ready}){const[mode,setMode]=useState('buy'),[amt,setAmt]=useState('1000');
+ const k=mode==='buy'?'sell':'buy';const val=c=>c==='IRT'?1:rows.find(r=>r.code===c)[k];
+ const opts=[{code:'IRT',en:t.toman,fa:t.toman},...CUR];const a=parseFloat(amt)||0;
+ const rate=ready?val(from)/val(to):0,res=a*rate;
+ const Sel=({v,set,lbl})=><div className="grid grid-cols-[1fr_1fr] gap-2"><label className="grid gap-1 text-sm mut">{lbl}<span className="relative block"><span className="absolute top-1/2 -translate-y-1/2" style={{insetInlineStart:8}}><Flag c={v} s={22}/></span><select className="fld" style={{paddingInlineStart:38}} value={v} onChange={e=>set(e.target.value)}>{opts.map(o=><option key={o.code} value={o.code}>{o.code} — {lang==='fa'?o.fa:o.en}</option>)}</select></span></label>
+  {lbl===t.from?<label className="grid gap-1 text-sm mut">{t.amt}<input className="fld" inputMode="decimal" value={amt} onChange={e=>setAmt(e.target.value.replace(/[^0-9.]/g,''))}/></label>
+  :<div className="grid gap-1 text-sm mut">{t.get}<output className="fld gold font-semibold" dir="ltr" style={{textAlign:'start'}}>{ready?fmt(res,'en',2):'—'}</output></div>}</div>;
+ return <div className="card p-5 h-full"><h2 className="serif text-2xl font-semibold">{t.ex}</h2><p className="mut text-sm mb-4">{t.exs}</p>
+ <div className="grid grid-cols-2 gap-2 mb-4" role="tablist">{['buy','sell'].map(m=><button key={m} role="tab" aria-selected={mode===m} className={mode===m?'gbtn':'obtn'} style={{justifyContent:'center'}} onClick={()=>setMode(m)}>{t[m]}</button>)}</div>
+ <Sel v={from} set={setFrom} lbl={t.from}/><p className="text-xs mut text-end mt-1">{t.avail}</p>
+ <div className="flex justify-center my-2"><button className="obtn" style={{padding:'.4rem'}} aria-label={t.swap} onClick={()=>{setFrom(to);setTo(from)}}><Ic n="swap" s={18}/></button></div>
+ <Sel v={to} set={setTo} lbl={t.to}/><p className="text-xs mut text-end mt-1" dir="ltr">{t.rate}: 1 {from} = {ready?fmt(rate,'en',4):'—'} {to}</p>
+ <button className="gbtn w-full mt-4 text-lg" disabled={!ready||!a||from===to} onClick={()=>notify(`${fmt(a,lang)} ${from} → ${fmt(res,lang,2)} ${to}. ${t.order}`)}>{t.c1}<Ic n="arrow" c="rtl:rotate-180"/></button>
+ <p className="text-xs mut text-center mt-3">{t.demo}</p></div>}
+
+function Social({k,url}){const L={telegram:'TG',x:'X',instagram:'IG',linkedin:'in',youtube:'YT'}[k];const st={width:34,height:34,border:'1px solid var(--line)',borderRadius:'50%',display:'grid',placeItems:'center',fontSize:12,color:'var(--gold)',opacity:url?1:.4};
+ return url?<a href={url} target="_blank" rel="noopener noreferrer" style={st} aria-label={k}>{L}</a>:<span style={st} aria-label={k+' (not configured)'}>{L}</span>}
+
+function App(){
+ const[lang,setLang]=useState('en'),[theme,setTheme]=useState(()=>{try{return localStorage.getItem('homa-theme')||(matchMedia('(prefers-color-scheme: light)').matches?'light':'dark')}catch(e){return'dark'}});
+ const[menu,setMenu]=useState(false),[modal,setModal]=useState(null),[toast,setToast]=useState(''),[favs,setFavs]=useState(['USD']),[from,setFrom]=useState('USD'),[to,setTo]=useState('EUR');
+ const[rs,reload]=useRates();const t=T[lang];
+ useEffect(()=>{const d=document.documentElement;d.lang=lang;d.dir=lang==='fa'?'rtl':'ltr';d.dataset.theme=theme;try{localStorage.setItem('homa-theme',theme)}catch(e){}},[lang,theme]);
+ const notify=m=>{setToast(m);clearTimeout(window.__tt);window.__tt=setTimeout(()=>setToast(''),5000)};
+ const rows=rs.st==='ok'?CUR.map(c=>({...c,buy:rs.rates[c.code][0],sell:rs.rates[c.code][1],chg:rs.rates[c.code][2]})):[];
+ const toggle=c=>setFavs(f=>f.includes(c)?f.filter(x=>x!==c):[...f,c]);
+ const pick=c=>{setFrom(c);document.getElementById('exchange').scrollIntoView({behavior:'smooth'})};
+ const FEAT=['shield','chart','bolt','head'];
+ return <>
+ <svg width="0" height="0" style={{position:'absolute'}} aria-hidden="true"><defs><linearGradient id="gd" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#f6dc98"/><stop offset="1" stopColor="#a8741f"/></linearGradient></defs></svg>
+ <header className="hdr"><div className="max-w-[1280px] mx-auto px-4 h-[68px] flex items-center justify-between gap-3"><Logo s={44}/>
+ <nav className="hidden xl:flex gap-5 text-sm" aria-label="Main">{t.nav.map((n,i)=><a key={i} href={NAVH[i]} className="py-1 hover:text-[var(--gold)]" style={{textDecoration:'none',color:'inherit'}}>{n}</a>)}</nav>
+ <div className="flex items-center gap-2"><button className="obtn" style={{padding:'.4rem .6rem'}} onClick={()=>setLang(lang==='en'?'fa':'en')} aria-label="Language"><Ic n="globe" s={16}/>{lang==='en'?'EN':'فارسی'}</button>
+ <button className="obtn" style={{padding:'.4rem'}} onClick={()=>setTheme(theme==='dark'?'light':'dark')} aria-label="Toggle theme"><Ic n={theme==='dark'?'moon':'sun'} s={18}/></button>
+ <button className="obtn hidden sm:inline-flex" onClick={()=>setModal('login')}>{t.login}</button><button className="gbtn" style={{padding:'.45rem .9rem'}} onClick={()=>setModal('signup')}>{t.signup}</button>
+ <button className="xl:hidden obtn" style={{padding:'.4rem'}} aria-expanded={menu} aria-label="Menu" onClick={()=>setMenu(!menu)}><Ic n={menu?'x':'menu'}/></button></div></div>
+ {menu&&<nav className="xl:hidden px-4 pb-3 grid grid-cols-2 gap-2" style={{background:'var(--bg)'}}>{t.nav.map((n,i)=><a key={i} href={NAVH[i]} onClick={()=>setMenu(false)} className="card px-3 py-2 text-sm" style={{textDecoration:'none',color:'inherit'}}>{n}</a>)}<button className="obtn sm:hidden" onClick={()=>{setMenu(false);setModal('login')}}>{t.login}</button></nav>}</header>
+
+ <main>
+ <section id="home" className="relative overflow-hidden" style={{minHeight:480,color:'#f3ecd8'}}><Skyline/>
+ <div className="absolute inset-0" style={{background:'linear-gradient(90deg,#05110e 0%,rgba(5,17,14,.72) 42%,rgba(5,17,14,.05) 80%)'}}/>
+ <div className="orn absolute inset-y-0 start-0 w-20" style={{WebkitMaskImage:'linear-gradient(90deg,#000,transparent)',maskImage:'linear-gradient(90deg,#000,transparent)'}}/>
+ <div className="hidden md:flex flex-col items-center absolute top-8 end-8 lg:end-16 text-center"><Bird s={96}/><div className="serif font-bold" style={{fontSize:44,color:'#ecd28f',textShadow:'0 2px 18px rgba(0,0,0,.6)'}}>صرافی هما</div><div className="gold" style={{letterSpacing:'.4em',color:'#e2c275'}}>HOMA EXCHANGE</div></div>
+ <div className="relative max-w-[1280px] mx-auto px-4 pt-14 pb-32"><p className="mb-3" style={{color:'#e2c275'}}>{t.eye}</p>
+ <h1 className="serif font-bold leading-[1.1]" style={{fontSize:'clamp(2.2rem,6vw,4rem)'}}>{t.h1}<br/><span style={{color:'#ecd28f'}}>{t.h2}</span></h1>
+ <p className="mt-4 text-lg" style={{color:'#e2c275',letterSpacing:'.1em'}}>{t.tag}</p><p className="mt-3 max-w-md" style={{color:'#e9e2cf'}}>{t.desc}</p>
+ <div className="mt-6 flex flex-wrap gap-3"><a href="#exchange" className="gbtn" style={{textDecoration:'none'}}>{t.c1}<Ic n="arrow" c="rtl:rotate-180"/></a><a href="#rates" className="obtn" style={{textDecoration:'none',color:'#f3ecd8',borderColor:'rgba(226,194,117,.7)'}}>{t.c2}</a></div></div></section>
+
+ <section id="rates" className="max-w-[1280px] mx-auto px-4 -mt-20 relative z-10">
+ <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">{rs.st==='loading'?[0,1,2,3].map(i=><Skel key={i}/>):rs.st==='err'?<div className="sm:col-span-2 lg:col-span-4"><Err t={t} retry={reload} msg={rs.msg}/></div>:rows.slice(0,4).map(r=>
+ <button key={r.code} onClick={()=>pick(r.code)} className="card p-4 text-start"><div className="flex items-center gap-3"><Flag c={r.code} s={40}/><div><div className="font-semibold">{r.code}</div><div className="text-xs mut">{lang==='fa'?r.fa:r.en}</div></div></div>
+ <div className="flex items-end justify-between mt-3"><div><div className="text-2xl font-semibold">{fmt(r.buy,lang)}</div><div className={'text-sm '+(r.chg>=0?'up':'dn')} dir="ltr">{r.chg>=0?'▲':'▼'} {pct(r.chg,lang)}</div></div><Spark seed={r.i+3} up={r.chg>=0}/></div></button>)}</div>
+ {rs.st==='ok'&&<div className="flex flex-wrap items-center gap-3 mt-3 text-xs mut"><span className="gold">{rs.demo?t.demo:'Live'}</span><span>{t.upd}: {rs.at.toLocaleTimeString(lang==='fa'?'fa-IR':'en-US',{hour:'2-digit',minute:'2-digit'})}</span><button className="gold inline-flex items-center gap-1" onClick={reload}><Ic n="refresh" s={13}/>{t.retry}</button></div>}</section>
+
+ <section className="max-w-[1280px] mx-auto px-4 mt-6 grid lg:grid-cols-[1.7fr_1fr] gap-5">
+ <div id="markets">{rs.st==='loading'?<div className="grid gap-2" aria-live="polite" aria-label={t.load}>{[0,1,2,3,4].map(i=><Skel key={i} h={52}/>)}</div>:rs.st==='err'?<Err t={t} retry={reload} msg={rs.msg}/>:<Market rows={rows} t={t} lang={lang} favs={favs} toggle={toggle} onPick={pick}/>}</div>
+ <div id="exchange"><Converter rows={rows} t={t} lang={lang} from={from} setFrom={setFrom} to={to} setTo={setTo} notify={notify} ready={rs.st==='ok'}/></div></section>
+
+ <section id="fees" className="max-w-[1280px] mx-auto px-4 mt-6"><div className="card grid grid-cols-2 lg:grid-cols-4 gap-5 p-5">{t.f.map((f,i)=><div key={i} className="flex items-start gap-3"><span className="grid place-items-center shrink-0 rounded-full gold" style={{width:46,height:46,border:'1px solid var(--line)'}}><Ic n={FEAT[i]} s={22}/></span><div><h3 className="font-semibold">{f[0]}</h3><p className="text-sm mut">{f[1]}</p></div></div>)}</div></section>
+
+ <section id="about" className="mt-6 relative overflow-hidden" style={{background:'linear-gradient(100deg,#0b2a21,#05110e 60%)',color:'#f3ecd8',borderBlock:'1px solid var(--line)'}}>
+ <div className="orn absolute inset-0" style={{opacity:.12}}/>
+ <div className="relative max-w-[1280px] mx-auto px-4 py-10 grid md:grid-cols-[1.2fr_1fr] lg:grid-cols-[1.1fr_1fr_.5fr] gap-6 items-center">
+ <div><h2 className="serif text-3xl font-semibold">{t.ph}</h2><p className="mt-3 max-w-md" style={{color:'#d6d3c4'}}>{t.pp}</p><a href="#fees" className="obtn mt-5" style={{textDecoration:'none',color:'#f3ecd8',borderColor:'rgba(226,194,117,.7)'}}>{t.learn}<Ic n="arrow" c="rtl:rotate-180" s={16}/></a></div>
+ <div id="contact" className="card p-5" style={{background:'rgba(5,17,14,.75)'}}><div className="flex items-center gap-3"><span className="grid place-items-center rounded-full" style={{width:44,height:44,background:'#2a9fd8'}}><Ic n="send" c="text-white"/></span><div><div className="font-semibold">{t.tg}</div><div className="text-sm" style={{color:'#b8c4bb'}}>{t.tgs}</div></div></div>
+ <a href={CONFIG.TELEGRAM_URL} target="_blank" rel="noopener noreferrer" className="gbtn w-full mt-4" style={{textDecoration:'none'}}><Ic n="send" s={16}/>{t.tgb}</a><p className="text-center text-sm mt-2 gold" dir="ltr">{CONFIG.TELEGRAM_TEXT}</p></div>
+ <div className="hidden lg:flex justify-center"><Bird s={170}/></div></div></section>
+ </main>
+
+ <footer style={{background:'#04100c',color:'#f3ecd8'}}><div className="max-w-[1280px] mx-auto px-4 py-10 grid sm:grid-cols-2 lg:grid-cols-[1.3fr_1fr_1fr_1fr_1.2fr] gap-8 text-sm">
+ <div><Logo s={52}/><p className="mt-3" style={{color:'#b8c4bb'}}>{t.slogan}</p>{(CONFIG.BUSINESS.address||CONFIG.BUSINESS.phone||CONFIG.BUSINESS.license)&&<p className="mt-2 text-xs" style={{color:'#b8c4bb'}}>{CONFIG.BUSINESS.address} {CONFIG.BUSINESS.phone} {CONFIG.BUSINESS.license}</p>}</div>
+ {[[t.q,t.nav.slice(0,5).map((n,i)=>[n,NAVH[i]])],[t.co,[5,6,7].map(i=>[t.nav[i],NAVH[i]])],[t.su,t.help.map(h=>[h,CONFIG.TELEGRAM_URL])]].map(([h,l])=><div key={h}><h3 className="gold font-semibold mb-2">{h}</h3><ul className="grid gap-1.5">{l.map(([n,u])=><li key={n}><a href={u} {...(u.startsWith('http')?{target:'_blank',rel:'noopener noreferrer'}:{})} style={{color:'#cfd6cc',textDecoration:'none'}}>{n}</a></li>)}</ul></div>)}
+ <div><h3 className="gold font-semibold mb-2">{t.fol}</h3><div className="flex gap-2 flex-wrap">{Object.entries(CONFIG.SOCIAL).map(([k,u])=><Social key={k} k={k} url={u}/>)}</div><a href={CONFIG.TELEGRAM_URL} target="_blank" rel="noopener noreferrer" className="gbtn mt-4" style={{textDecoration:'none'}}><Ic n="send" s={16}/><span dir="ltr">{CONFIG.TELEGRAM_TEXT}</span></a></div></div>
+ <div className="max-w-[1280px] mx-auto px-4 pb-6 flex flex-wrap gap-4 justify-between items-center text-xs" style={{color:'#b8c4bb'}}><span>© {new Date().getFullYear()} HOMA EXCHANGE | صرافی هما. {t.rights}</span>
+ <span className="flex gap-4"><button onClick={()=>setModal('priv')}>{t.priv}</button><button onClick={()=>setModal('terms')}>{t.terms}</button></span>
+ <label className="flex items-center gap-1"><Ic n="globe" s={14}/><select className="bg-transparent" aria-label="Language" value={lang} onChange={e=>setLang(e.target.value)}><option value="en" style={{color:'#000'}}>EN</option><option value="fa" style={{color:'#000'}}>فارسی</option></select></label></div></footer>
+
+ {modal&&<Modal kind={modal} t={t} onClose={()=>setModal(null)} notify={notify}/>}
+ {toast&&<div role="status" className="card fixed z-50 px-4 py-3 text-sm" style={{bottom:'calc(16px + env(safe-area-inset-bottom,0px))',insetInline:16,maxWidth:460,marginInline:'auto',background:'var(--bg2)'}}>{toast}</div>}</>}
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
